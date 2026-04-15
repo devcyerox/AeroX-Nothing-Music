@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 module.exports = {
   name: 'help',
@@ -29,7 +29,7 @@ module.exports = {
 
       const row1 = new ActionRowBuilder()
         .addComponents(
-          new SelectMenuBuilder()
+          new StringSelectMenuBuilder()
             .setCustomId('helpop')
             .setPlaceholder('❯ SELECT A CATEGORY')
             .addOptions([
@@ -150,7 +150,7 @@ module.exports = {
       });
 
       collector.on('collect', async (interaction) => {
-        if (interaction.isSelectMenu()) {
+        if (interaction.isStringSelectMenu()) {
           for (const value of interaction.values) {
             if (value === `h1`) {
               return interaction.update({ embeds: [helpmenu], components: [row1, row2] });

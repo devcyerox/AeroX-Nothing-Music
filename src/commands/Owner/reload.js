@@ -1,31 +1,74 @@
+const { EmbedBuilder } = require("discord.js");
+const { readdirSync } = require("fs");
+
 module.exports = {
     name: "reload",
     category: "Owner",
     aliases: ["rd"],
-    description: "Reload Command",
-    args: false,
-    usage: "<string>",
+    description: "Reloads a command",
+    args: true,
+    usage: "<command name>",
     permission: [],
     owner: true,
     execute: async (message, args, client, prefix) => {
-
-        if (!args.length) return message.channel.send(`mention command`);
         const commandName = args[0].toLowerCase();
-        const command = message.client.commands.get(commandName)
-            || message.client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+        const command = client.commands.get(commandName) || 
+                       client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
 
-        if (!command) return message.channel.send(`There is no command with name or alias \`${commandName}\`, ${message.author}!`);
+        if (!command) {
+            return message.reply({ 
+                embeds: [new EmbedBuilder()
+                    .setColor("#ff0000")
+                    .setDescription(`❌ Could not find a command with name or alias \`${commandName}\`.`)] 
+            });
+        }
 
-        delete require.cache[require.resolve(`${process.cwd()}/src/commands/${command.category}/${command.name}.js`)];
+        // Find the category by searching through the commands directory
+        let category = command.category;
+        const commandFolders = readdirSync("./src/commands");
+        
+        if (!category) {
+            // Try to find it if category is missing from command object
+            for (const folder of commandFolders) {
+                const folderFiles = readdirSync(`./src/commands/${folder}`);
+                if (folderFiles.includes(`${command.name}.js`)) {
+                    category = folder;
+                    break;
+                }
+            }
+        }
 
+        if (!category) {
+            return message.reply({ 
+                embeds: [new EmbedBuilder()
+                    .setColor("#ff0000")
+                    .setDescription(`❌ Could not determine category for command \`${command.name}\`.`)] 
+            });
+        }
 
+        const path = `../../commands/${category}/${command.name}.js`;
+        
         try {
-            const newCommand = require(`${process.cwd()}/src/commands/${command.category}/${command.name}.js`);
-            message.client.commands.set(newCommand.name, newCommand);
-            message.channel.send({ content: `Successfully reload complete ${args}` });
+            // Clear cache
+            delete require.cache[require.resolve(path)];
+            
+            // Re-require and set
+            const newCommand = require(path);
+            client.commands.set(newCommand.name, newCommand);
+            
+            return message.reply({ 
+                embeds: [new EmbedBuilder()
+                    .setColor(client.ankushcolor)
+                    .setDescription(`✅ Successfully reloaded command: \`${newCommand.name}\``)] 
+            });
         } catch (error) {
             console.error(error);
-            message.channel.send(`There was an error while reloading a command \`${command.name}\`:\n\`${error.message}\``);
+            return message.reply({ 
+                embeds: [new EmbedBuilder()
+                    .setColor("#ff0000")
+                    .setTitle(`Error reloading \`${commandName}\``)
+                    .setDescription(`\`\`\`js\n${error.message}\n\`\`\``)] 
+            });
         }
     }
 }

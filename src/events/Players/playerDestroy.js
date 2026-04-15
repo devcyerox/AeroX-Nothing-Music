@@ -1,27 +1,41 @@
-const { EmbedBuilder, WebhookClient, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
-const db2 = require("../../models/autoreconnect");
+const { EmbedBuilder, WebhookClient } = require("discord.js");
 const web1 = process.env.PLAYER_LOG_WEBHOOK ? new WebhookClient({ url: process.env.PLAYER_LOG_WEBHOOK }) : null;
+
 module.exports = {
     name: "playerDestroy",
     run: async (client, player) => {
-
-        let name = client.guilds.cache.get(player.guildId).name;
+        let guild = client.guilds.cache.get(player.guildId);
+        if (!guild) return;
+        
+        let name = guild.name;
+        
         const embed2 = new EmbedBuilder()
-    .setColor(client.ankushcolor)
-    .setAuthor({name: `Player Destroy` , iconURL: client.user.displayAvatarURL()})
-    .setDescription(`**Server Name:** ${name}\n**Server Id:** ${player.guildId}`)
-    if (web1) web1.send({embeds: [embed2]})
+            .setColor(client.ankushcolor)
+            .setAuthor({ name: `Player Destroy`, iconURL: client.user.displayAvatarURL() })
+            .setDescription(`**Server Name:** ${name}\n**Server Id:** ${player.guildId}`)
+            .setTimestamp();
+            
+        if (web1) web1.send({ embeds: [embed2] }).catch(() => null);
     
         client.logger.log(`Player Destroy in ${name} [ ${player.guildId} ]`, "log");
 
-        if (player.data.get('message') && player.data.get('message').deletable ) player.data.get('message').delete().catch(() => null);
+        // Clean up message
+        try {
+            const message = player.data.get('message');
+            if (message && message.deletable) {
+                await message.delete().catch(() => null);
+            }
+        } catch (e) {
+            // Silently fail
+        }
 
-        if (player.data.get("autoplay")) try { player.data.delete("autoplay") } catch (err) { client.logger.log(err.stack ? err.stack : err, "log") };
-
-        let guild = client.guilds.cache.get(player.guild);
-        if (!guild) return;
-        let channel = guild.channels.cache.get(data.Channel);
-        if (!channel) return;
+        // Clean up autoplay data
+        try {
+            if (player.data.get("autoplay")) {
+                player.data.delete("autoplay");
+            }
+        } catch (err) {
+            client.logger.log(err.stack ? err.stack : err, "error");
+        }
     }
-
 };

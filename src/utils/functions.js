@@ -1,8 +1,5 @@
-const { Message, MessageEmbed, Client, TextChannel, MessageButton, MessageActionRow, EmbedBuilder, Attachment, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const { convertTime } = require("./convert");
-const { KazagumoPlayer, KazagumoTrack } = require("kazagumo");
-const axios = require('axios');
-const config = require('../config')
 
 /**
  * 
@@ -11,7 +8,7 @@ const config = require('../config')
  */
 async function oops(channel, args, client) {
     try {
-        let embed1 = new MessageEmbed().setColor("#ff0000").setDescription(`${args}`);
+        let embed1 = new EmbedBuilder().setColor("#ff0000").setDescription(`${args}`);
 
         const m = await channel.send({
             embeds: [embed1]
@@ -31,7 +28,7 @@ async function oops(channel, args, client) {
  */
 async function buttonReply(message, content, buttons = []) {
     try {
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
             .setColor("#00ff00")
             .setDescription(content);
 
@@ -84,22 +81,21 @@ async function autoplay(player, client) {
 
         if (!requester) {
             console.log("No requester found, using default");
-            requester = { id: client.user.id };
+            requester = client.user;
         }
 
         const searchQueries = [
-            `${track.author}`,
-            `${track.author} songs`,
             `${track.author} popular`,
-            `${track.title} ${track.author}`,
-            `songs like ${track.title}`,
+            `${track.author} songs`,
+            `songs like ${track.title} ${track.author}`,
         ];
 
         for (const query of searchQueries) {
             try {
                 console.log(`Autoplay searching: ${query}`);
                 
-                let res = await player.search(query, requester);
+                // Kazagumo v3 search: search(query, options)
+                let res = await player.search(query, { requester: requester });
 
                 if (res && res.tracks && res.tracks.length > 0) {
                     const filteredTracks = res.tracks.filter(t => {
@@ -120,8 +116,6 @@ async function autoplay(player, client) {
                             !testTitle.includes('live') &&
                             !testTitle.includes('cover') &&
                             !testTitle.includes('reaction') &&
-                            !testTitle.includes('remix') &&
-                            !testTitle.includes('lyric') &&
                             !isInHistory &&
                             (artistCooldown[testAuthor] || 0) < ARTIST_COOLDOWN
                         );

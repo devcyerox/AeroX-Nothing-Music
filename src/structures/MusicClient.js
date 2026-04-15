@@ -60,15 +60,15 @@ class MusicBot extends Client {
     this.logger = require("../base/logger.js");
     this.emoji = require("../base/emoji.json");
     if (!this.token) this.token = this.config.token;
-    this.manager
+    this.manager;
     this.canvas = new Canvas();
+    this.prefixes = new Collection();
+    this.noPrefix = new Set();
     this.dokdo = new Dokdo(this, {
-			aliases: ['jsk'],
-			prefix: '!!',
-			owners: ["239496212699545601",
-
-  "", "", ""],
-		});
+      aliases: ['jsk', 'dokdo'],
+      prefix: this.config.prefix,
+      owners: this.config.ownerID,
+    });
   }
 
   _loadPlayer() {
@@ -87,7 +87,6 @@ class MusicBot extends Client {
           searchLimit: 10,
           searchMarket: 'PK',
         }),
-        new Plugins.PlayerMoved(this),
       ],
       defaultSearchEngine: "youtube",
       send: (guildId, payload) => {

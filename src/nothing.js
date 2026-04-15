@@ -1,21 +1,25 @@
 const Prefix = require('./models/prefix');
-// Load prefix data into client.prefixes Map
-async function loadPrefixes(client) {
-  const prefixes = await Prefix.findAll();
-  client.prefixes = new Map();
-  prefixes.forEach(prefixRecord => {
-      client.prefixes.set(prefixRecord.id, prefixRecord.prefix);
-  });
-}
+const NoPrefix = require('./models/noprefix');
 const { initializeDatabase } = require('./database');
 const MusicBot = require("./structures/MusicClient");
 const client = new MusicBot();
 
 module.exports = client;
 
+async function loadPrefixes(client) {
+  const prefixes = await Prefix.findAll();
+  prefixes.forEach(p => client.prefixes.set(p.id, p.prefix));
+}
+
+async function loadNoPrefix(client) {
+  const noPrefixData = await NoPrefix.findAll();
+  noPrefixData.forEach(p => client.noPrefix.add(p.userId));
+}
+
 async function initializeBot() {
-  await initializeDatabase(); // Ensure database is initialized and tables are synced
+  await initializeDatabase();
   await loadPrefixes(client);
+  await loadNoPrefix(client);
   client._loadPlayer();
   client._loadClientEvents();
   client._loadNodeEvents();
@@ -28,5 +32,4 @@ async function initializeBot() {
 initializeBot();
 
 process.on('unhandledRejection', (reason, p) => { console.log(reason, p); });
-
 process.on('uncaughtException', (err, origin) => { console.log(err, origin); });

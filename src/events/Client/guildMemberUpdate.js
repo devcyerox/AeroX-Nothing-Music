@@ -4,11 +4,12 @@ const { Events } = require('discord.js');
 module.exports = {
     name: Events.GuildMemberUpdate,
     run: async (client, oldMember, newMember) => {
-        if (!oldMember || !newMember) return; // Ensure both members exist
+        if (!oldMember || !newMember) return;
 
-        if (oldMember.guild.id !== "1221909487472869619") return;
+        const supportGuildId = client.config.supportGuildId || "1221909487472869619";
+        if (oldMember.guild.id !== supportGuildId) return;
 
-        const supportGuild = client.guilds.cache.get("1221909487472869619");
+        const supportGuild = client.guilds.cache.get(supportGuildId);
         if (!supportGuild) return;
 
         const role = supportGuild.roles.premiumSubscriberRole;
@@ -19,21 +20,15 @@ module.exports = {
 
         try {
             if (!hadRoleBefore && hasRoleNow) {
-                const existing = await NoPrefixes.findOne({ where: { userId: newMember.id } });
-
-                if (!existing) {
-                    await NoPrefixes.create({ userId: newMember.id });
-                    console.log(`✅ Auto NoPrefix added to ${newMember.user.tag}`);
-                    await client.channels.cache.get("1364788828514287646")?.send(
-                        `✅ Auto NoPrefix Added to \`${newMember}\` with reason: \`Boosted The Server\``
-                    );
+                if (!client.noPrefix.has(newMember.id)) {
+                    await NoPrefixes.create({ userId: newMember.id }).catch(() => null);
+                    client.noPrefix.add(newMember.id);
+                    console.log(`✅ Auto NoPrefix added to ${newMember.user.tag} (Boosted)`);
                 }
             } else if (hadRoleBefore && !hasRoleNow) {
-                await NoPrefixes.destroy({ where: { userId: oldMember.id } });
-                console.log(`❌ Auto NoPrefix removed from ${oldMember.user.tag}`);
-                await client.channels.cache.get("1364788830174969910")?.send(
-                    `❌ Auto NoPrefix Removed from \`${oldMember}\` with reason: \`Removed The Boost\``
-                );
+                await NoPrefixes.destroy({ where: { userId: oldMember.id } }).catch(() => null);
+                client.noPrefix.delete(oldMember.id);
+                console.log(`❌ Auto NoPrefix removed from ${oldMember.user.tag} (Unboosted)`);
             }
         } catch (error) {
             console.error("Error updating NoPrefix status:", error);

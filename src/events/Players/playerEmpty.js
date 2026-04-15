@@ -1,31 +1,34 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, REST } = require('discord.js');
 const db2 = require("../../models/autoreconnect");
 const { autoplay } = require("../../utils/functions");
-const { REST } = require("@discordjs/rest");
 
 module.exports = {
   name: 'playerEmpty',
-  run: async (client, player, message) => {
+  run: async (client, player) => {
     try {
       // Clean up previous message if it exists
-      if (player.data.get('message') && player.data.get('message').deletable) {
-        await player.data.get('message').delete().catch(() => null);
+      const prevMessage = player.data.get('message');
+      if (prevMessage && prevMessage.deletable) {
+        await prevMessage.delete().catch(() => null);
       }
 
       // Update voice status
       const voiceId = player.voiceId;
-      const status = `;`;
-      const rest = new REST({ version: '10' }).setToken(client.config.token);
-      await rest.put(`/channels/${voiceId}/voice-status`, {
-        body: {
-          status: status
+      if (voiceId) {
+        try {
+          const rest = new REST({ version: '10' }).setToken(client.config.token);
+          await rest.put(`/channels/${voiceId}/voice-status`, {
+            body: { status: "" }
+          });
+        } catch (e) {
+          // Ignore voice status errors
         }
-      });
+      }
 
       // Handle autoplay if enabled
       if (player.data.get("autoplay")) {
-        player.previous = player.data.get("autoplaySystem");
-        return autoplay(player, client);
+        const result = await autoplay(player, client);
+        if (result) return;
       }
 
       // Get guild information
@@ -43,45 +46,39 @@ module.exports = {
         .addComponents(
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
-            .setLabel("Admin Perms")
-            .setURL(
-              `https://discord.com/oauth2/authorize?client_id=${client.user.id}&permissions=37088600&scope=bot%20applications.commands`
-            ),
+            .setLabel("Invite Me")
+            .setURL(`https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands`),
           new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
-            .setLabel("Require Perms")
-            .setURL(
-              `https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=37080065&scope=bot`
-            )
+            .setLabel("Support Server")
+            .setURL("https://discord.gg/w77ymEU82a")
         );
 
       // Check for 24/7 mode
       const TwoFourSeven = await db2.findOne({ where: { Guild: guild.id } });
       
       if (TwoFourSeven) {
-        // If 24/7 mode is enabled
-        embed
-          .setTitle('Queue Empty - 24/7 Mode Active')
-          .setDescription('The queue is currently empty, but I\'ll stay in the voice channel since 24/7 mode is enabled.');
-      } else {
-        // If 24/7 mode is disabled
-        embed
-          .setTitle('Queue Empty - Disconnecting')
-          .setDescription('The queue has ended. I\'ll be disconnecting from the voice channel.');
+        embed.setDescription('The queue is empty, but I\'m staying here because **24/7 Mode** is active.');
         
-        // Destroy the player since 24/7 mode is not enabled
+        const channel = client.channels.cache.get(player.textId);
+        if (channel) {
+          await channel.send({ embeds: [embed], components: [buttons] }).then(msg => {
+            setTimeout(() => msg.delete().catch(() => null), 10000);
+          }).catch(() => null);
+        }
+      } else {
+        embed.setDescription('The queue has ended. Disconnecting now.');
+        
+        const channel = client.channels.cache.get(player.textId);
+        if (channel) {
+          await channel.send({ embeds: [embed], components: [buttons] }).then(msg => {
+            setTimeout(() => msg.delete().catch(() => null), 10000);
+          }).catch(() => null);
+        }
+        
+        // Destroy the player
         await player.destroy();
       }
-
-      // Send the message and delete after 10 seconds
-      await client.channels.cache.get(player.textId)?.send({
-        embeds: [embed],
-        components: [buttons]
-      }).then(msg => {
-        setTimeout(() => {
-          msg.delete().catch(() => null);
-        }, 10000);
-      });
 
     } catch (error) {
       console.error('Error in playerEmpty event:', error);

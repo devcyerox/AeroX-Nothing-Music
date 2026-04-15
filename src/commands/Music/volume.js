@@ -12,15 +12,13 @@ module.exports = {
   botPrams: ['EmbedLinks'],
   dj: false,
   owner: false,
-  player: false,
+  player: true,
   inVoiceChannel: true,
   sameVoiceChannel: true,
   execute: async (message, args, client, prefix) => {
     try {
-      // Get the player instance for this guild
       const player = client.manager.players.get(message.guild.id);
       
-      // Check if player exists
       if (!player) {
         const noPlayerEmbed = new EmbedBuilder()
           .setColor(client.ankushcolor)
@@ -28,23 +26,22 @@ module.exports = {
             name: message.author.username,
             iconURL: message.author.displayAvatarURL({ dynamic: true })
           })
-          .setDescription('There is no active player in this server. Please use the join command first.')
+          .setDescription('❌ | There is no active player in this server.')
           .setTimestamp();
           
         return message.channel.send({ embeds: [noPlayerEmbed] });
       }
 
-      // If no volume argument is provided, display current volume
+      const currentVolume = player.volume || 100;
+
       if (!args[0]) {
         return message.channel.send({
-          content: `Current volume: **${player.volume}%** 🔊`
+          content: `Current volume: **${currentVolume}%** 🔊`
         });
       }
 
-      // Parse the volume argument
       const volume = parseInt(args[0]);
       
-      // Validate volume range
       if (isNaN(volume) || volume < 0 || volume > 150) {
         const invalidVolumeEmbed = new EmbedBuilder()
           .setColor(client.ankushcolor)
@@ -54,8 +51,7 @@ module.exports = {
         return message.channel.send({ embeds: [invalidVolumeEmbed] });
       }
 
-      // Check if the new volume is the same as current volume
-      if (player.volume === volume) {
+      if (currentVolume === volume) {
         const sameVolumeEmbed = new EmbedBuilder()
           .setColor(client.ankushcolor)
           .setDescription(`Volume is already set to **${volume}%** 🔊`)
@@ -64,16 +60,13 @@ module.exports = {
         return message.channel.send({ embeds: [sameVolumeEmbed] });
       }
 
-      // Set the new volume
-      await player.setVolume(volume);
+      player.setVolume(volume);
       
-      // Create emoji based on volume level
       let volumeEmoji = '🔇';
       if (volume > 70) volumeEmoji = '🔊';
       else if (volume > 30) volumeEmoji = '🔉';
       else if (volume > 0) volumeEmoji = '🔈';
       
-      // Send success message
       const volumeChangedEmbed = new EmbedBuilder()
         .setColor(client.ankushcolor)
         .setDescription(`${volumeEmoji} Volume set to **${volume}%**`)

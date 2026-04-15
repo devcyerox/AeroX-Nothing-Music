@@ -10,7 +10,8 @@ module.exports = {
   bugReportChannel: "", // ID of the channel where bug reports will be sent
   embedColor: '#ff0000', // Using your existing ankushcolor
   supportServer: "https://discord.com/invite/w77ymEU82a", // Your support server link
-  
+  supportGuildId: "1221909487472869619", // Your support guild ID
+
   nodes: [
     {
       url: `lavalinkv4.serenetia.com:80`,

@@ -1,12 +1,15 @@
-const { MessageEmbed } = require('discord.js');
-const { autoplay } = require('../../utils/functions'); // Adjust path to your functions file
+const { autoplay } = require('../../utils/functions');
 
 module.exports = {
 	name: "playerEnd",
 	run: async (client, player) => {
-		
-		if (player.data.get("message") && player.data.get("message").deletable) {
-			player.data.get("message").delete().catch(() => null);
+		try {
+			const prevMessage = player.data.get("message");
+			if (prevMessage && prevMessage.deletable) {
+				await prevMessage.delete().catch(() => null);
+			}
+		} catch (e) {
+			// Silently fail
 		}
 		
 		let guild = client.guilds.cache.get(player.guildId);
@@ -21,21 +24,22 @@ module.exports = {
 				const result = await autoplay(player, client);
 				
 				if (!result) {
-					console.log("⚠️ Autoplay could not find songs, will retry on next track");
+					console.log("⚠️ Autoplay could not find songs");
 				}
 			} catch (error) {
 				console.error("❌ Autoplay failed:", error);
 				
-				// Optional: Send a message to the channel if autoplay fails
 				const channel = guild.channels.cache.get(player.textId);
 				if (channel) {
 					const { EmbedBuilder } = require('discord.js');
 					const embed = new EmbedBuilder()
 						.setColor("#ff0000")
-						.setDescription("❌ Autoplay encountered an error. Trying again...")
+						.setDescription("❌ Autoplay encountered an error. Trying to recover...")
 						.setTimestamp();
 					
-					channel.send({ embeds: [embed] }).catch(() => null);
+					channel.send({ embeds: [embed] }).then(msg => {
+						setTimeout(() => msg.delete().catch(() => null), 5000);
+					}).catch(() => null);
 				}
 			}
 		}

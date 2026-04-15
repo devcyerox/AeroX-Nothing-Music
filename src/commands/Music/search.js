@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { convertTime } = require('../../utils/convert.js');
 
 module.exports = {
@@ -78,12 +78,12 @@ module.exports = {
       // Limit to 25 options as Discord has a limit
       const limitedResults = results.slice(0, 25);
       
-      const select = new SelectMenuBuilder()
+      const select = new StringSelectMenuBuilder()
         .setCustomId("select")
         .setPlaceholder("Select a Track to play")
         .addOptions(limitedResults || []);
         
-      const replacingoptionifnotfound = new SelectMenuBuilder()
+      const replacingoptionifnotfound = new StringSelectMenuBuilder()
         .setCustomId("select2")
         .setPlaceholder("Select a Track to play")
         .addOptions([

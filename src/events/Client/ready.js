@@ -20,28 +20,26 @@ module.exports = {
         }, 5000);
         
         // Booster checking logic
-        const supportGuild = client.guilds.cache.get("1221909487472869619");
-        if (!supportGuild) return console.log("Guild not found!");
+        const supportGuildId = client.config.supportGuildId || "1221909487472869619";
+        const supportGuild = client.guilds.cache.get(supportGuildId);
+        if (!supportGuild) return console.log("[BoosterCheck] Support Guild not found!");
+        
         const role = supportGuild.roles.premiumSubscriberRole;
-        if (!role) return console.log("Premium role not found!");
+        if (!role) return console.log("[BoosterCheck] Premium role not found!");
         
         try {
-            await supportGuild.members.fetch();
+            await supportGuild.members.fetch().catch(() => null);
             const boosters = supportGuild.members.cache.filter(member => member.roles.cache.has(role.id));
-            console.log(`Found ${boosters.size} boosters.`);
+            console.log(`[BoosterCheck] Found ${boosters.size} boosters.`);
             
             for (const booster of boosters.values()) {
-                const existing = await NoPrefixes.findOne({ where: { userId: booster.id } });
-                if (!existing) {
-                    await NoPrefixes.create({ userId: booster.id });
-                    console.log(`Auto NoPrefix given to ${booster.user.tag}`);
-                    await client.channels.cache.get("1364788828514287646")?.send(
-                        `✅ Auto NoPrefix Added to \`${booster.user.tag}\` for \`Already Boosting The Server\``
-                    );
-                }
+                if (client.noPrefix.has(booster.id)) continue; 
+                await NoPrefixes.create({ userId: booster.id }).catch(() => null);
+                client.noPrefix.add(booster.id);
+                console.log(`[BoosterCheck] Auto NoPrefix given to ${booster.user.tag}`);
             }
         } catch (error) {
-            console.error("Error fetching or processing boosters:", error);
+            console.error("[BoosterCheck] Error:", error);
         }
         
         console.log("Finished checking boosters.");
